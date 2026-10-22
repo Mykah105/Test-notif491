@@ -123,8 +123,6 @@ if not TOPIC:
     print("NTFY_TOPIC secret is missing")
     sys.exit(1)
 
-if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
-    notify("Test", "Phone notifications are working.")
 
 state = load_state()
 check_alienware(state)
