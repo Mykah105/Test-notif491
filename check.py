@@ -119,6 +119,35 @@ def check_amd(state):
         handle(state, "amd|" + str(it.get("id")), it.get("title", "Giveaway"), count, AMD_URL)
 
 
+# ---------- Alienware vault timers ----------
+VAULT_PAGES = [
+    ("Battle Pass Store", AW_BASE + "/battle-store"),
+    ("Game Vault", AW_BASE + "/marketplace/game-vault"),
+]
+
+
+def check_vaults(state):
+    from datetime import datetime, timezone
+    for name, url in VAULT_PAGES:
+        try:
+            r = requests.get(url, headers=UA, timeout=20)
+            r.raise_for_status()
+            m = re.search(r'data-countdown="([^"]+)"', r.text)
+            if not m:
+                print(name, "-> no timer found")
+                continue
+            target = datetime.fromisoformat(m.group(1))
+            minutes = (target - datetime.now(timezone.utc)).total_seconds() / 60
+            print(name, "-> opens in", round(minutes, 1), "min")
+            if 0 < minutes <= 6:
+                key = hashlib.sha1(("vault|" + url + "|" + m.group(1)).encode()).hexdigest()[:12]
+                if not state.get(key):
+                    notify(name + " opening soon", f"{name} opens in about {round(minutes)} minutes", url)
+                state[key] = True
+        except Exception as e:
+            print("Vault error:", name, "-", e)
+
+
 if not TOPIC:
     print("NTFY_TOPIC secret is missing")
     sys.exit(1)
@@ -127,4 +156,5 @@ if not TOPIC:
 state = load_state()
 check_alienware(state)
 check_amd(state)
+check_vaults(state)
 save_state(state)
