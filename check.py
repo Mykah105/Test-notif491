@@ -48,6 +48,8 @@ def notify(title, message, url=None):
 def handle(state, raw_key, title, count, url):
     key = hashlib.sha1(raw_key.encode()).hexdigest()[:12]
     print(title, "->", count)
+    if key not in state and count == 0:
+        notify("New giveaway listed", f"{title}: no keys yet", url)
     if count > 0 and not state.get(key):
         notify("Key available!", f"{title}: {count} keys", url)
     state[key] = count > 0
