@@ -59,6 +59,7 @@ def aw_list():
     try:
         r = requests.get(AW_LIST, headers=AW_HEADERS, timeout=20)
         r.raise_for_status()
+        print("AW fields:", sorted(r.json()["data"][0]))
         for g in r.json()["data"][:8]:
             if g.get("url"):
                 items.append((urljoin(AW_BASE, g["url"]), g.get("title", "Giveaway")))
@@ -108,6 +109,8 @@ def check_amd(state):
         print("AMD error:", e, "| status/content-type:", ctype)
         return
     print("AMD: read", len(items), "giveaways")
+    print("AMD fields:", sorted({k for it in items for k in it}))
+    print("AMD statuses:", sorted({str(it.get("status")) for it in items}))
     for it in items:
         if it.get("deleted") or it.get("status") != "active":
             count = 0
