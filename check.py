@@ -152,7 +152,45 @@ def check_vaults(state):
         except Exception as e:
             print("Vault error:", name, "-", e)
 
+# ---------- Lenovo game key drops ----------
+LENOVO_BASE = "https://gaming.lenovo.com"
+LENOVO_LIST = LENOVO_BASE + "/game-key-drops"
 
+
+def check_lenovo(state):
+    from datetime import datetime, timezone
+    try:
+        r = requests.get(LENOVO_LIST, headers=UA, timeout=20)
+        r.raise_for_status()
+        links = sorted(set(re.findall(r'href="((?:https://gaming\.lenovo\.com)?/game-key-drops/post/[^"#?]+)"', r.text)))[:15]
+    except Exception as e:
+        print("Lenovo error:", e)
+        return
+    print("Lenovo: found", len(links), "drop posts")
+    for link in links:
+        try:
+            url = urljoin(LENOVO_BASE, link)
+            p = requests.get(url, headers=UA, timeout=20)
+            p.raise_for_status()
+            m = re.search(r"Start date.{0,300}?(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP]M)", p.text, re.S)
+            if not m:
+                print("Lenovo:", url[-40:], "-> no start date found")
+                continue
+            mo, d, y, hh, mm, ap = m.groups()
+            hh = int(hh) % 12 + (12 if ap == "PM" else 0)
+            start = datetime(int(y), int(mo), int(d), hh, int(mm), tzinfo=timezone.utc)
+            t = re.search(r"<title>(.*?)</title>", p.text, re.S)
+            name = re.sub(r"\(Coming Soon\)\s*|\s*-\s*Game Key Drops", "", t.group(1)).strip() if t else "Lenovo drop"
+            minutes = (start - datetime.now(timezone.utc)).total_seconds() / 60
+            print("Lenovo:", name, "-> opens in", round(minutes, 1), "min")
+            if 0 < minutes <= 6:
+                key = hashlib.sha1(("lenovo|" + url + "|" + start.isoformat()).encode()).hexdigest()[:12]
+                if not state.get(key):
+                    notify("Lenovo drop opening soon", f"{name} opens in about {round(minutes)} minutes", url)
+                state[key] = True
+        except Exception as e:
+            print("Lenovo error:", e)
+          
 if not TOPIC:
     print("NTFY_TOPIC secret is missing")
     sys.exit(1)
