@@ -152,15 +152,21 @@ def check_vaults(state):
         except Exception as e:
             print("Vault error:", name, "-", e)
 
+
 # ---------- Lenovo game key drops ----------
 LENOVO_BASE = "https://gaming.lenovo.com"
 LENOVO_LIST = LENOVO_BASE + "/game-key-drops"
+LENOVO_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 
 def check_lenovo(state):
     from datetime import datetime, timezone
     try:
-        r = requests.get(LENOVO_LIST, headers=UA, timeout=20)
+        r = requests.get(LENOVO_LIST, headers=LENOVO_HEADERS, timeout=20)
         r.raise_for_status()
         links = sorted(set(re.findall(r'href="((?:https://gaming\.lenovo\.com)?/game-key-drops/post/[^"#?]+)"', r.text)))[:15]
     except Exception as e:
@@ -170,7 +176,7 @@ def check_lenovo(state):
     for link in links:
         try:
             url = urljoin(LENOVO_BASE, link)
-            p = requests.get(url, headers=UA, timeout=20)
+            p = requests.get(url, headers=LENOVO_HEADERS, timeout=20)
             p.raise_for_status()
             m = re.search(r"Start date.{0,300}?(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2})\s*([AP]M)", p.text, re.S)
             if not m:
@@ -190,7 +196,8 @@ def check_lenovo(state):
                 state[key] = True
         except Exception as e:
             print("Lenovo error:", e)
-          
+
+
 if not TOPIC:
     print("NTFY_TOPIC secret is missing")
     sys.exit(1)
