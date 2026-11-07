@@ -137,18 +137,11 @@ def check_vaults(state):
         try:
             r = requests.get(url, headers=UA, timeout=20)
             r.raise_for_status()
-            m = re.search(r'data-countdown="([^"]+)"', r.text)
-            closing = False
-            if m:
-                before = r.text[max(0, m.start() - 150):m.start()].lower()
-                closing = "open" not in before
-            else:
+            m = re.search(r'opens in:?\s*<[a-z]+[^>]*data-countdown="([^"]+)"', r.text, re.I)
+            if not m:
                 m = re.search(r'data-unlock-date="([^"]+)"', r.text)
             if not m:
                 print(name, "-> no timer found")
-                continue
-            if closing:
-                print(name, "-> timer is for closing, skipping")
                 continue
             raw = m.group(1)
             print(name, "-> timer value:", raw)
