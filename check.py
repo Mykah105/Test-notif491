@@ -138,14 +138,31 @@ def check_vaults(state):
             r = requests.get(url, headers=UA, timeout=20)
             r.raise_for_status()
             m = re.search(r'data-countdown="([^"]+)"', r.text)
+            closing = False
+            if m:
+                before = r.text[max(0, m.start() - 150):m.start()].lower()
+                closing = "clos" in before or "ends in" in before
+            else:
+                m = re.search(r'data-unlock-date="([^"]+)"', r.text)
             if not m:
                 print(name, "-> no timer found")
                 continue
-            target = datetime.fromisoformat(m.group(1))
+            if closing:
+                print(name, "-> timer is for closing, skipping")
+                continue
+            raw = m.group(1)
+            print(name, "-> timer value:", raw)
+            if raw.isdigit():
+                n = int(raw)
+                target = datetime.fromtimestamp(n / 1000 if n > 10**11 else n, tz=timezone.utc)
+            else:
+                target = datetime.fromisoformat(raw)
+                if target.tzinfo is None:
+                    target = target.replace(tzinfo=timezone.utc)
             minutes = (target - datetime.now(timezone.utc)).total_seconds() / 60
             print(name, "-> opens in", round(minutes, 1), "min")
             if 0 < minutes <= 6:
-                key = hashlib.sha1(("vault|" + url + "|" + m.group(1)).encode()).hexdigest()[:12]
+                key = hashlib.sha1(("vault|" + url + "|" + raw).encode()).hexdigest()[:12]
                 if not state.get(key):
                     notify(name + " opening soon", f"{name} opens in about {round(minutes)} minutes", url)
                 state[key] = True
