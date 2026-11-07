@@ -141,7 +141,7 @@ def check_vaults(state):
             closing = False
             if m:
                 before = r.text[max(0, m.start() - 150):m.start()].lower()
-                closing = "clos" in before or "ends in" in before
+                closing = "open" not in before
             else:
                 m = re.search(r'data-unlock-date="([^"]+)"', r.text)
             if not m:
