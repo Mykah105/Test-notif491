@@ -208,6 +208,23 @@ def check_lenovo(state):
             print("Lenovo error:", e)
 
 
+# ---------- Token renewal reminder (every 89 days) ----------
+TOKEN_START = "2026-11-21"
+
+
+def check_token_reminder(state):
+    from datetime import datetime, timedelta, timezone
+    start = datetime.strptime(TOKEN_START, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    k = int((now - start).days // 89)
+    if k < 1:
+        return
+    due = (start + timedelta(days=89 * k)).replace(hour=10)
+    key = hashlib.sha1(("tokremind|" + str(k)).encode()).hexdigest()[:12]
+    if due <= now < due + timedelta(days=3) and not state.get(key):
+        notify("Replace your token", "Your GitHub timer token expires tomorrow if you set it for 90 days. Make a new one and update it on cron-job.org.")
+        state[key] = True
+      
 if not TOPIC:
     print("NTFY_TOPIC secret is missing")
     sys.exit(1)
